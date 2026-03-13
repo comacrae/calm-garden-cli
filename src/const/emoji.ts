@@ -1,33 +1,46 @@
 export const plantEmojis = {
-  arugula: "🥬",
-  daisy: "🌼",
-  iris: "🪻",
-  lotus: "🪷",
-  marigold: "🏵️",
-  "pink-rose": "🌹",
-  poppy: "🥀",
-  sunflower: "🌻",
-  tomato: "🍅",
-  tree: "🌳",
-  cactus: "🌵",
-  palm: "🌴",
-  bonsai: "🎍",
-  bamboo: "🎋",
-  hibiscus: "🌺",
-  orchid: "🌷",
-  "cherry-blossom": "🌸",
-  mushroom: "🍄",
-  herb: "🌿",
+  // Common (cheap)
   seedling: "🌱",
+  herb: "🌿",
   leaves: "🍃",
+  arugula: "🥬",
+  mushroom: "🍄",
+  rock: "🪨",
+
+  // Uncommon
+  daisy: "🌼",
+  poppy: "🥀",
+  cactus: "🌵",
+  bamboo: "🎋",
   "four-leaf-clover": "🍀",
   "maple-leaf": "🍁",
+  tomato: "🍅",
+  tulip: "🌷",
+
+  // Rare
+  sunflower: "🌻",
+  "pink-rose": "🌹",
+  hibiscus: "🌺",
+  iris: "🪻",
+  marigold: "🏵️",
   evergreen: "🌲",
-  rock: "🪨",
+  tree: "🌳",
+  palm: "🌴",
+
+  // Epic
+  lotus: "🪷",
+  orchid: "🪻",
+  "cherry-blossom": "🌸",
+  bonsai: "🎍",
+
+  // Legendary
+  "dragon-fruit": "🐉",
+  "crystal-flower": "💎",
+  "golden-bloom": "🌟",
+  "ancient-tree": "🏯",
 } as const;
 
 export const emojis = {
-  // Add more plant types and their corresponding emojis as needed
   expansion: "🔍",
   shuffle: "🔀",
   sell: "💰",

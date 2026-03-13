@@ -2,7 +2,8 @@
 import { setupConfig } from "./cli";
 import { showGarden } from "./garden";
 import { showProgress } from "./progress";
-import { getBreathingPatterns, startBreathing } from "./breathe";
+import { getBreathingPatterns } from "./breathe";
+import { startBreathingOverlay } from "./overlay";
 import { showShop } from "./shop/service";
 import { initStorage, resetData } from "./storage";
 
@@ -15,7 +16,7 @@ async function main() {
     const { action } = await setupConfig();
 
     if (patternSet.has(action)) {
-      await startBreathing(action);
+      await startBreathingOverlay(action);
       continue;
     }
 
@@ -33,7 +34,7 @@ async function main() {
         await resetData();
         break;
       case "exit":
-        console.log("Thank you for using CLI Box Breathing App!");
+        console.log("Thank you for using CLI Calm Garden!");
         return;
       default:
         console.log("Invalid option. Please try again.");
