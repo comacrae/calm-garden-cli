@@ -16,6 +16,7 @@ import {
 import { Plant } from "../types/Plant";
 import { emojis, EmojiKey } from "../const/emoji";
 import { Config } from "../config";
+import { renderGardenGrid } from "../garden";
 
 export async function handleSellPlant(
   data: BreathingData,
@@ -97,17 +98,13 @@ export async function handleRegularPurchase(
   config: Config
 ): Promise<void> {
   const effectivePrice = getEffectivePrice(item, config);
-  const response: { quantity: number } = await prompt({
-    type: "numeral",
-    name: "quantity",
-    message: `How many ${item.name}s do you want to buy?`,
-    initial: 1,
-    min: 1,
-    max: Math.floor(data.coins / effectivePrice),
-  });
 
-  const quantity = response.quantity;
-  const totalCost = effectivePrice * quantity;
+  if (data.coins < effectivePrice) {
+    console.log("Not enough coins. Keep practicing to earn more!");
+    return;
+  }
+
+  if (!data.plants) data.plants = [];
 
   // Ask for color if this is a colorable plant (exotic glyphs)
   let chosenColor: PlantColor | undefined;
@@ -121,44 +118,71 @@ export async function handleRegularPurchase(
     chosenColor = colorResponse.color as PlantColor;
   }
 
-  if (data.coins >= totalCost) {
-    if (!data.plants) data.plants = [];
-    const availableSpaces =
-      data.gardenSize * data.gardenSize - data.plants.length;
+  // Show garden and let user pick position
+  console.log("\nYour garden:");
+  const lines = renderGardenGrid(data.plants, data.gardenSize, true);
+  for (const line of lines) {
+    console.log(line);
+  }
+  console.log("");
 
-    if (availableSpaces >= quantity) {
-      for (let i = 0; i < quantity; i++) {
-        const newPlant = placePlantRandomly(data, item, chosenColor);
-        data.plants.push(newPlant);
-        console.log(
-          `Placed ${item.name} at position (${newPlant.x}, ${newPlant.y})`
-        );
-      }
-      data.coins -= totalCost;
-      console.log(
-        `You've purchased ${quantity} ${item.name}(s) for your garden for a total of ${totalCost} coins!`
-      );
-    } else {
-      console.log(
-        `Your garden only has space for ${availableSpaces} more plants. Consider expanding your garden.`
-      );
+  const rowChoices = Array.from({ length: data.gardenSize }, (_, i) => ({
+    name: String(i),
+    message: `Row ${i}`,
+  }));
+  const colChoices = Array.from({ length: data.gardenSize }, (_, i) => ({
+    name: String(i),
+    message: `Col ${i}`,
+  }));
+
+  const rowResponse = await prompt<{ row: string }>({
+    type: "select",
+    name: "row",
+    message: "Choose a row:",
+    choices: rowChoices,
+  });
+  const colResponse = await prompt<{ col: string }>({
+    type: "select",
+    name: "col",
+    message: "Choose a column:",
+    choices: colChoices,
+  });
+
+  const y = parseInt(rowResponse.row);
+  const x = parseInt(colResponse.col);
+
+  const existing = data.plants.find((p) => p.x === x && p.y === y);
+  if (existing) {
+    const existingEmoji = emojis[existing.type as EmojiKey] || "?";
+    const replaceResponse = await prompt<{ confirm: string }>({
+      type: "select",
+      name: "confirm",
+      message: `${existingEmoji} ${existing.name} is already at (${x}, ${y}). Replace it?`,
+      choices: [
+        { name: "yes", message: "Yes, replace it" },
+        { name: "no", message: "No, cancel" },
+      ],
+    });
+
+    if (replaceResponse.confirm === "no") {
+      console.log("Purchase cancelled.");
+      return;
     }
-  } else {
-    console.log("Not enough coins. Keep practicing to earn more!");
+
+    // Remove the existing plant
+    data.plants = data.plants.filter((p) => !(p.x === x && p.y === y));
   }
 
-  saveData(data);
-}
-function placePlantRandomly(data: BreathingData, item: ShopItem, color?: PlantColor): Plant {
-  let x: number, y: number;
-  do {
-    x = Math.floor(Math.random() * data.gardenSize);
-    y = Math.floor(Math.random() * data.gardenSize);
-  } while (data.plants.some((p) => p.x === x && p.y === y));
+  const newPlant: Plant = { name: item.name, type: item.type, x, y, growth: 1 };
+  if (chosenColor) newPlant.color = chosenColor;
 
-  const plant: Plant = { name: item.name, type: item.type, x, y, growth: 1 };
-  if (color) plant.color = color;
-  return plant;
+  data.plants.push(newPlant);
+  data.coins -= effectivePrice;
+
+  const emoji = emojis[item.type as EmojiKey] || "?";
+  console.log(`Placed ${emoji} ${item.name} at (${x}, ${y})!`);
+
+  saveData(data);
 }
 
 export async function handleTrade(
@@ -263,7 +287,63 @@ export async function handleTrade(
     chosenColor = colorResponse.color as PlantColor;
   }
 
-  const newPlant = placePlantRandomly(data, reward, chosenColor);
+  // Let user choose where to place the reward
+  console.log("\nChoose where to place your new plant:");
+  const gridLines = renderGardenGrid(data.plants, data.gardenSize, true);
+  for (const line of gridLines) {
+    console.log(line);
+  }
+  console.log("");
+
+  const rowChoices = Array.from({ length: data.gardenSize }, (_, i) => ({
+    name: String(i),
+    message: `Row ${i}`,
+  }));
+  const colChoices = Array.from({ length: data.gardenSize }, (_, i) => ({
+    name: String(i),
+    message: `Col ${i}`,
+  }));
+
+  const rowResp = await prompt<{ row: string }>({
+    type: "select",
+    name: "row",
+    message: "Choose a row:",
+    choices: rowChoices,
+  });
+  const colResp = await prompt<{ col: string }>({
+    type: "select",
+    name: "col",
+    message: "Choose a column:",
+    choices: colChoices,
+  });
+
+  const tradeY = parseInt(rowResp.row);
+  const tradeX = parseInt(colResp.col);
+
+  // Replace any existing plant at the chosen position
+  const existingAtSpot = data.plants.find((p) => p.x === tradeX && p.y === tradeY);
+  if (existingAtSpot) {
+    const existingEmoji = emojis[existingAtSpot.type as EmojiKey] || "?";
+    const replaceResp = await prompt<{ confirm: string }>({
+      type: "select",
+      name: "confirm",
+      message: `${existingEmoji} ${existingAtSpot.name} is at (${tradeX}, ${tradeY}). Replace it?`,
+      choices: [
+        { name: "yes", message: "Yes, replace it" },
+        { name: "no", message: "No, cancel" },
+      ],
+    });
+    if (replaceResp.confirm === "no") {
+      console.log("Trade cancelled. Your plants have been returned.");
+      // Re-add the removed plants
+      data.plants.push(...plantsToRemove);
+      return;
+    }
+    data.plants = data.plants.filter((p) => !(p.x === tradeX && p.y === tradeY));
+  }
+
+  const newPlant: Plant = { name: reward.name, type: reward.type, x: tradeX, y: tradeY, growth: 1 };
+  if (chosenColor) newPlant.color = chosenColor;
   data.plants.push(newPlant);
 
   if (reward.rarity && !data.discovered.includes(reward.type)) {
