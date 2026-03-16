@@ -123,8 +123,9 @@ async function changePriceScale(config: Config): Promise<void> {
 async function changeVisualizer(config: Config): Promise<void> {
   const visualizerDescriptions: Record<VisualizerName, string> = {
     "progress-bar": "Classic progress bar",
-    wave: "Flowing sine wave",
+    wave: "Rolling ocean wave",
     orb: "Pulsing radial orb",
+    lotus: "Geometric breathing mandala",
   };
 
   const choices = (Object.keys(visualizerDescriptions) as VisualizerName[]).map((key) => ({

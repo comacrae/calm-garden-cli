@@ -7,12 +7,15 @@ import {
   shopItems,
   calculateExpansionPrice,
   getEffectivePrice,
+  isTierUnlocked,
+  getUnlockHint,
 } from "./items";
 import {
   handleSellPlant,
   handleGardenExpansion,
   handleShuffleGarden,
   handleRegularPurchase,
+  handleTrade,
 } from "./actions";
 import { Config, getPalette } from "../config";
 import { plantLore } from "../const/lore";
@@ -58,10 +61,18 @@ async function purchaseItem(
   item: ShopItem,
   config: Config
 ): Promise<void> {
+  // Enforce unlock gates for rarity-gated items
+  if (item.rarity && !isTierUnlocked(item.rarity, data.discovered)) {
+    console.log(`🔒 ${getUnlockHint(item.rarity, data.discovered)}`);
+    await sleep(2000);
+    return;
+  }
+
   const handlers: Record<string, () => Promise<void>> = {
     "Sell Plant": async () => await handleSellPlant(data, item, config),
     "Garden Expansion": async () => await handleGardenExpansion(data, config),
     "Shuffle Garden": async () => await handleShuffleGarden(data, item, config),
+    "Trade Plants": async () => await handleTrade(data, config),
   };
 
   const handler =
@@ -123,28 +134,49 @@ async function showItemDetail(
 function createShopMenu(
   data: BreathingData,
   config: Config
-): Array<{ name: string; value: number; hint: string }> {
-  const choices = shopItems.map((item, index) => {
+): Array<{ name: string; value: number; hint: string; disabled?: string }> {
+  const choices: Array<{ name: string; value: number; hint: string; disabled?: string }> = [];
+
+  for (let i = 0; i < shopItems.length; i++) {
+    const item = shopItems[i];
     const price = item.name === "Garden Expansion"
       ? calculateExpansionPrice(data.gardenSize, config)
       : item.name === "Sell Plant"
+      ? 0
+      : item.name === "Trade Plants"
       ? 0
       : getEffectivePrice(item, config);
     const lore = plantLore[item.type];
     const loreHint = lore ? ` — ${lore.latin}` : "";
 
-    return {
-      name:
-        item.name === "Garden Expansion"
-          ? `${item.emoji} ${item.name} (${data.gardenSize + 1}x${data.gardenSize + 1})`
-          : `${item.emoji} ${item.name}${loreHint}`,
-      value: index,
-      hint:
-        item.name === "Sell Plant"
-          ? " (sell a plant)"
-          : ` (${price} coins)`,
-    };
-  });
+    // Check if this rarity tier is locked
+    const locked = item.rarity && !isTierUnlocked(item.rarity, data.discovered);
+
+    if (locked) {
+      choices.push({
+        name: `🔒 ${item.name}`,
+        value: i,
+        hint: ` (${getUnlockHint(item.rarity!, data.discovered)})`,
+      });
+    } else {
+      choices.push({
+        name:
+          item.name === "Garden Expansion"
+            ? `${item.emoji} ${item.name} (${data.gardenSize + 1}x${data.gardenSize + 1})`
+            : item.name === "Trade Plants"
+            ? `${item.emoji} ${item.name}`
+            : `${item.emoji} ${item.name}${loreHint}`,
+        value: i,
+        hint:
+          item.name === "Sell Plant"
+            ? " (sell a plant)"
+            : item.name === "Trade Plants"
+            ? " (trade 3 plants → 1 rarer plant)"
+            : ` (${price} coins)`,
+      });
+    }
+  }
+
   choices.push({ name: "🚪 Exit Shop", value: -1, hint: "Leave the shop" });
   return choices;
 }
