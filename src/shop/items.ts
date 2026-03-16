@@ -1,5 +1,6 @@
 import { emojis, EmojiKey } from "../const/emoji";
 import { Plant } from "../types/Plant";
+import { Config, getPriceMultiplier } from "../config";
 
 export interface ShopItem {
   name: string;
@@ -38,10 +39,21 @@ export const shopItems: ShopItem[] = [
   { name: "Tree", type: "tree", cost: 200, rarity: "rare" },
   { name: "Palm", type: "palm", cost: 175, rarity: "rare" },
 
+  // Exotic — 220-380 coins (ASCII/Unicode glyphs)
+  { name: "Fern Glyph", type: "fern-glyph", cost: 220, rarity: "exotic" },
+  { name: "Star Moss", type: "star-moss", cost: 240, rarity: "exotic" },
+  { name: "Hex Bloom", type: "hex-bloom", cost: 230, rarity: "exotic" },
+  { name: "Spiral Fern", type: "spiral-fern", cost: 260, rarity: "exotic" },
+  { name: "Rune Sprout", type: "rune-sprout", cost: 280, rarity: "exotic" },
+  { name: "Sigil Vine", type: "sigil-vine", cost: 300, rarity: "exotic" },
+  { name: "Thorn Script", type: "thorn-script", cost: 320, rarity: "exotic" },
+  { name: "Eye Cluster", type: "eye-cluster", cost: 380, rarity: "exotic" },
+
   // Epic — 400-600 coins (5-10 minutes)
   { name: "Lotus", type: "lotus", cost: 400, rarity: "epic" },
   { name: "Cherry Blossom", type: "cherry-blossom", cost: 500, rarity: "epic" },
   { name: "Bonsai", type: "bonsai", cost: 600, rarity: "epic" },
+  { name: "Orchid", type: "orchid", cost: 450, rarity: "epic" },
 
   // Legendary — 1000+ coins (15+ minutes)
   { name: "Dragon Fruit", type: "dragon-fruit", cost: 1000, rarity: "legendary" },
@@ -61,13 +73,17 @@ export function initializeShopItems(): void {
   }
 }
 
-export function calculateExpansionPrice(currentSize: number): number {
-  return Math.floor(100 * Math.pow(1.5, currentSize - 3));
+export function getEffectivePrice(item: ShopItem, config: Config): number {
+  return Math.floor(item.cost * getPriceMultiplier(config));
 }
 
-export function getPlantValue(plant: Plant): number {
+export function calculateExpansionPrice(currentSize: number, config: Config): number {
+  return Math.floor(100 * Math.pow(1.5, currentSize - 3) * getPriceMultiplier(config));
+}
+
+export function getPlantValue(plant: Plant, config: Config): number {
   const baseValue =
     shopItems.find((item) => item.name === plant.name)?.cost || 10;
   const growthMultiplier = 1 + (plant.growth - 1) * 0.1;
-  return Math.round(baseValue * growthMultiplier);
+  return Math.round(baseValue * growthMultiplier * getPriceMultiplier(config));
 }

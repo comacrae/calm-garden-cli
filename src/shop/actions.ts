@@ -1,12 +1,14 @@
 import { prompt } from "enquirer";
 import { BreathingData, saveData } from "../storage";
-import { ShopItem, calculateExpansionPrice, getPlantValue } from "./items";
+import { ShopItem, calculateExpansionPrice, getPlantValue, getEffectivePrice } from "./items";
 import { Plant } from "../types/Plant";
 import { emojis } from "../const/emoji";
+import { Config } from "../config";
 
 export async function handleSellPlant(
   data: BreathingData,
-  item: ShopItem
+  item: ShopItem,
+  config: Config
 ): Promise<void> {
   if (!data.plants || data.plants.length === 0) {
     console.log("Your garden is empty. There are no plants to sell.");
@@ -20,7 +22,7 @@ export async function handleSellPlant(
     return {
       name: `${emoji} ${plant.name} at (${plant.x}, ${
         plant.y
-      }) - Value: ${getPlantValue(plant)} coins`,
+      }) - Value: ${getPlantValue(plant, config)} coins`,
       value: index,
     };
   });
@@ -37,7 +39,7 @@ export async function handleSellPlant(
   const plant = data.plants[index];
   data.plants = data.plants.filter((p) => !(p.x == plant.x && p.y == plant.y));
   //console.log("plant", plant);
-  const sellValue = getPlantValue(plant);
+  const sellValue = getPlantValue(plant, config);
   data.coins += sellValue;
   console.log(`You've sold a ${plant.name} for ${sellValue} coins!`);
 
@@ -45,9 +47,10 @@ export async function handleSellPlant(
 }
 
 export async function handleGardenExpansion(
-  data: BreathingData
+  data: BreathingData,
+  config: Config
 ): Promise<void> {
-  const cost = calculateExpansionPrice(data.gardenSize);
+  const cost = calculateExpansionPrice(data.gardenSize, config);
   if (data.coins >= cost) {
     data.coins -= cost;
     data.gardenSize++;
@@ -63,11 +66,13 @@ export async function handleGardenExpansion(
 
 export async function handleShuffleGarden(
   data: BreathingData,
-  item: ShopItem
+  item: ShopItem,
+  config: Config
 ): Promise<void> {
+  const cost = getEffectivePrice(item, config);
   if (data.plants && data.plants.length > 1) {
     shuffleGarden(data);
-    data.coins -= item.cost;
+    data.coins -= cost;
     console.log("Your garden has been shuffled!");
   } else {
     console.log("You need at least two plants to shuffle the garden.");
@@ -76,19 +81,21 @@ export async function handleShuffleGarden(
 
 export async function handleRegularPurchase(
   data: BreathingData,
-  item: ShopItem
+  item: ShopItem,
+  config: Config
 ): Promise<void> {
+  const effectivePrice = getEffectivePrice(item, config);
   const response: { quantity: number } = await prompt({
     type: "numeral",
     name: "quantity",
     message: `How many ${item.name}s do you want to buy?`,
     initial: 1,
     min: 1,
-    max: Math.floor(data.coins / item.cost),
+    max: Math.floor(data.coins / effectivePrice),
   });
 
   const quantity = response.quantity;
-  const totalCost = item.cost * quantity;
+  const totalCost = effectivePrice * quantity;
 
   if (data.coins >= totalCost) {
     if (!data.plants) data.plants = [];

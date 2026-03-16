@@ -5,10 +5,14 @@ import { showProgress } from "./progress";
 import { getBreathingPatterns } from "./breathe";
 import { startBreathingOverlay } from "./overlay";
 import { showShop } from "./shop/service";
+import { showSettings } from "./settings";
+import { showEncyclopedia } from "./encyclopedia";
+import { loadConfig } from "./config";
 import { initStorage, resetData } from "./storage";
 
 async function main() {
   await initStorage();
+  let config = await loadConfig();
 
   const patterns = await getBreathingPatterns();
   const patternSet = new Set(patterns.map((p) => p.name));
@@ -16,7 +20,8 @@ async function main() {
     const { action } = await setupConfig();
 
     if (patternSet.has(action)) {
-      await startBreathingOverlay(action);
+      config = await loadConfig();
+      await startBreathingOverlay(action, config);
       continue;
     }
 
@@ -28,7 +33,16 @@ async function main() {
         await showProgress();
         break;
       case "shop":
-        await showShop();
+        config = await loadConfig();
+        await showShop(config);
+        break;
+      case "encyclopedia":
+        config = await loadConfig();
+        await showEncyclopedia(config);
+        break;
+      case "settings":
+        config = await loadConfig();
+        await showSettings(config);
         break;
       case "reset":
         await resetData();

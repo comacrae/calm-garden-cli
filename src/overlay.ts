@@ -3,6 +3,8 @@ import { breathingPatterns } from "./const/patterns";
 import { BreathingPhase } from "./types/BreathingPattern";
 import { emojis, EmojiKey } from "./const/emoji";
 import { loadData, saveData, BreathingData } from "./storage";
+import { Config, getPalette, getDifficultyTier, Palette } from "./config";
+import { visualizers } from "./visualizers";
 
 // ─── State ───────────────────────────────────────────────────────────
 
@@ -18,6 +20,9 @@ let activePhases: BreathingPhase[] = [];
 let phaseIndex = 0;
 let menuOpen = false;
 let menuIndex = 0;
+let config: Config;
+let palette: Palette;
+let tickCounter = 0;
 
 let inputCleanup: (() => void) | null = null;
 
@@ -60,34 +65,37 @@ function render(): void {
   const lines: string[] = [];
 
   lines.push("");
-  lines.push(center(chalk.bold("🌿  calm garden  🌿"), w));
-  lines.push(center(chalk.dim(patternName), w));
+  lines.push(center(palette.primary("🌿  calm garden  🌿"), w));
+  lines.push(center(palette.dim(patternName), w));
   lines.push("");
 
   if (paused) {
-    lines.push(center(chalk.yellow.bold("⏸  PAUSED"), w));
+    lines.push(center(palette.hold("⏸  PAUSED"), w));
   } else {
     const phaseColor =
       currentPhaseName === "Inhale"
-        ? chalk.cyan.bold
+        ? palette.inhale
         : currentPhaseName === "Exhale"
-        ? chalk.green.bold
-        : chalk.yellow.bold;
+        ? palette.exhale
+        : palette.hold;
     lines.push(center(phaseColor(`${currentPhaseName}`), w));
   }
 
   lines.push("");
 
-  const barWidth = Math.min(30, w - 10);
   const progress =
     currentPhaseDuration > 0 ? currentPhaseSecond / currentPhaseDuration : 0;
-  const filled = Math.round(progress * barWidth);
-  const bar =
-    chalk.cyan("█".repeat(filled)) +
-    chalk.dim("░".repeat(barWidth - filled));
-  lines.push(center(bar, w));
+  const vizLines = visualizers[config.visualizer](
+    progress,
+    currentPhaseName,
+    palette,
+    w
+  );
+  for (const line of vizLines) {
+    lines.push(center(line, w));
+  }
   lines.push(
-    center(chalk.dim(`${currentPhaseSecond}/${currentPhaseDuration}s`), w)
+    center(palette.dim(`${currentPhaseSecond}/${currentPhaseDuration}s`), w)
   );
 
   lines.push("");
@@ -112,9 +120,9 @@ function render(): void {
 
   lines.push(
     center(
-      chalk.dim(`☀️ ${data.coins}`) +
-        chalk.dim("  ⏱ ") +
-        chalk.dim(formatTime(sessionTime)),
+      palette.dim(`☀️ ${data.coins}`) +
+        palette.dim("  ⏱ ") +
+        palette.dim(formatTime(sessionTime)),
       w
     )
   );
@@ -123,7 +131,7 @@ function render(): void {
 
   lines.push(
     center(
-      chalk.dim("[space] pause/resume  [m] menu  [q] back"),
+      palette.dim("[space] pause/resume  [m] menu  [q] back"),
       w
     )
   );
@@ -159,23 +167,23 @@ function renderMenu(): void {
 
   const lines: string[] = [];
   lines.push("");
-  lines.push(center(chalk.bold("🌿  select pattern  🌿"), w));
+  lines.push(center(palette.primary("🌿  select pattern  🌿"), w));
   lines.push("");
 
   for (let i = 0; i < breathingPatterns.length; i++) {
     const p = breathingPatterns[i];
     const selected = i === menuIndex;
-    const prefix = selected ? chalk.cyan.bold("▸ ") : "  ";
+    const prefix = selected ? palette.accent("▸ ") : "  ";
     const text = selected
-      ? chalk.cyan.bold(`${p.emoji} ${p.display}`)
-      : chalk.dim(`${p.emoji} ${p.display}`);
+      ? palette.accent(`${p.emoji} ${p.display}`)
+      : palette.dim(`${p.emoji} ${p.display}`);
     lines.push(center(prefix + text, w));
-    lines.push(center(chalk.dim(`  ${p.description}`), w));
+    lines.push(center(palette.dim(`  ${p.description}`), w));
     lines.push("");
   }
 
   lines.push(
-    center(chalk.dim("[↑↓] select  [enter] start  [m] back"), w)
+    center(palette.dim("[↑↓] select  [enter] start  [m] back"), w)
   );
 
   process.stdout.write(lines.join("\n"));
@@ -270,7 +278,12 @@ async function breatheLoop(): Promise<void> {
 
         sessionTime++;
         data.totalSecondsPracticed++;
-        data.coins++;
+        tickCounter++;
+        const tier = getDifficultyTier(config);
+        if (tickCounter >= tier.ticksPerCoin) {
+          data.coins++;
+          tickCounter = 0;
+        }
         await saveData(data);
       }
 
@@ -282,7 +295,8 @@ async function breatheLoop(): Promise<void> {
 // ─── Exported entry point ────────────────────────────────────────────
 
 export async function startBreathingOverlay(
-  patternType: string
+  patternType: string,
+  userConfig: Config
 ): Promise<void> {
   // Reset state for each session
   paused = false;
@@ -290,6 +304,9 @@ export async function startBreathingOverlay(
   sessionTime = 0;
   menuOpen = false;
   menuIndex = 0;
+  tickCounter = 0;
+  config = userConfig;
+  palette = getPalette(config);
 
   data = await loadData();
 
@@ -318,9 +335,11 @@ export async function startBreathingOverlay(
   moveTo(1, 1);
 
   if (sessionTime > 0) {
+    const tier = getDifficultyTier(config);
+    const coinsEarned = Math.floor(sessionTime / tier.ticksPerCoin);
     console.log(
-      chalk.green(
-        `Session done. ${sessionTime}s practiced, ${sessionTime} coins earned.\n`
+      palette.secondary(
+        `Session done. ${sessionTime}s practiced, ${coinsEarned} coins earned.\n`
       )
     );
   }
