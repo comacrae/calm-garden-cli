@@ -1,5 +1,6 @@
 import { emojis, EmojiKey } from "../const/emoji";
 import { Plant } from "../types/Plant";
+import { Config, getPriceMultiplier } from "../config";
 
 export interface ShopItem {
   name: string;
@@ -72,13 +73,17 @@ export function initializeShopItems(): void {
   }
 }
 
-export function calculateExpansionPrice(currentSize: number): number {
-  return Math.floor(100 * Math.pow(1.5, currentSize - 3));
+export function getEffectivePrice(item: ShopItem, config: Config): number {
+  return Math.floor(item.cost * getPriceMultiplier(config));
 }
 
-export function getPlantValue(plant: Plant): number {
+export function calculateExpansionPrice(currentSize: number, config: Config): number {
+  return Math.floor(100 * Math.pow(1.5, currentSize - 3) * getPriceMultiplier(config));
+}
+
+export function getPlantValue(plant: Plant, config: Config): number {
   const baseValue =
     shopItems.find((item) => item.name === plant.name)?.cost || 10;
   const growthMultiplier = 1 + (plant.growth - 1) * 0.1;
-  return Math.round(baseValue * growthMultiplier);
+  return Math.round(baseValue * growthMultiplier * getPriceMultiplier(config));
 }

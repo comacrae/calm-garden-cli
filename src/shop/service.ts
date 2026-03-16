@@ -6,6 +6,7 @@ import {
   initializeShopItems,
   shopItems,
   calculateExpansionPrice,
+  getEffectivePrice,
 } from "./items";
 import {
   handleSellPlant,
@@ -14,8 +15,10 @@ import {
   handleRegularPurchase,
 } from "./actions";
 import { sleep } from "../utils";
+import { Config, getPalette } from "../config";
+import { plantLore } from "../const/lore";
 
-export async function showShop(): Promise<void> {
+export async function showShop(config: Config): Promise<void> {
   let data = await loadData();
   initializeShopItems();
 
@@ -25,7 +28,7 @@ export async function showShop(): Promise<void> {
     console.log(`💰 You have ${data.coins} coins.`);
     console.log(`🌳 Your garden size: ${data.gardenSize}x${data.gardenSize}\n`);
 
-    const choices = createShopMenu(data);
+    const choices = createShopMenu(data, config);
 
     const response = await prompt<{ choice: string }>({
       type: "select",
@@ -39,7 +42,7 @@ export async function showShop(): Promise<void> {
     const item = shopItems.find((x) => response.choice.includes(x.name));
 
     if (item) {
-      await purchaseItem(data, item);
+      await purchaseItem(data, item, config);
     } else {
       console.log("Invalid selection. Please try again.");
       await sleep(2000);
@@ -49,16 +52,22 @@ export async function showShop(): Promise<void> {
 
 async function purchaseItem(
   data: BreathingData,
-  item: ShopItem
+  item: ShopItem,
+  config: Config
 ): Promise<void> {
   const handlers: Record<string, () => Promise<void>> = {
-    "Sell Plant": async () => await handleSellPlant(data, item),
-    "Garden Expansion": async () => await handleGardenExpansion(data),
-    "Shuffle Garden": async () => await handleShuffleGarden(data, item),
+    "Sell Plant": async () => await handleSellPlant(data, item, config),
+    "Garden Expansion": async () => await handleGardenExpansion(data, config),
+    "Shuffle Garden": async () => await handleShuffleGarden(data, item, config),
   };
 
   const handler =
-    handlers[item.name] || (() => handleRegularPurchase(data, item));
+    handlers[item.name] || (async () => {
+      await handleRegularPurchase(data, item, config);
+      if (item.rarity && !data.discovered.includes(item.type)) {
+        data.discovered.push(item.type);
+      }
+    });
 
   await handler();
   await saveData(data);
@@ -66,22 +75,30 @@ async function purchaseItem(
 }
 
 function createShopMenu(
-  data: BreathingData
+  data: BreathingData,
+  config: Config
 ): Array<{ name: string; value: number; hint: string }> {
-  const expansionPrice = calculateExpansionPrice(data.gardenSize);
-  const choices = shopItems.map((item, index) => ({
-    name:
-      item.name === "Garden Expansion"
-        ? `${item.emoji} ${item.name} (${data.gardenSize + 1}x${
-            data.gardenSize + 1
-          })`
-        : `${item.emoji} ${item.name}`,
-    value: index,
-    hint:
-      item.name === "Garden Expansion"
-        ? ` (Cost: ${expansionPrice} coins)`
-        : ` (Cost: ${item.cost} coins)`,
-  }));
+  const choices = shopItems.map((item, index) => {
+    const price = item.name === "Garden Expansion"
+      ? calculateExpansionPrice(data.gardenSize, config)
+      : item.name === "Sell Plant"
+      ? 0
+      : getEffectivePrice(item, config);
+    const lore = plantLore[item.type];
+    const loreHint = lore ? ` — ${lore.latin}` : "";
+
+    return {
+      name:
+        item.name === "Garden Expansion"
+          ? `${item.emoji} ${item.name} (${data.gardenSize + 1}x${data.gardenSize + 1})`
+          : `${item.emoji} ${item.name}${loreHint}`,
+      value: index,
+      hint:
+        item.name === "Sell Plant"
+          ? " (sell a plant)"
+          : ` (${price} coins)`,
+    };
+  });
   choices.push({ name: "🚪 Exit Shop", value: -1, hint: "Leave the shop" });
   return choices;
 }
