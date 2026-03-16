@@ -33,8 +33,8 @@ export async function setupConfig() {
         message: `${p.emoji} ${p.display}`,
         hint: p.description!,
       })),
+      { name: "back", message: "↩ Back" },
     ];
-
 
     const breathingResponse = await prompt<{ breathingType: string }>({
       type: "select",
@@ -42,6 +42,10 @@ export async function setupConfig() {
       message: "Choose a breathing exercise:",
       choices: breathingChoices,
     });
+
+    if (breathingResponse.breathingType === "back") {
+      return { action: "back" };
+    }
 
     return { action: breathingResponse.breathingType };
   }

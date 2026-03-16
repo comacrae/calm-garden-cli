@@ -1,4 +1,4 @@
-import { exit } from "process";
+import { prompt } from "enquirer";
 import { loadData } from "./storage";
 import { clearConsole } from "./utils";
 
@@ -15,6 +15,13 @@ export async function showProgress(): Promise<void> {
   console.log(`Garden size: ${data.gardenSize}x${data.gardenSize}`);
   console.log(`Number of plants: ${data.plants.length}`);
 
+  console.log("");
+  await prompt<{ action: string }>({
+    type: "select",
+    name: "action",
+    message: "",
+    choices: [{ name: "back", message: "↩ Back" }],
+  });
 }
 function formatTime(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
