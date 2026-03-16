@@ -38,6 +38,16 @@ export const plantEmojis = {
   "crystal-flower": "💎",
   "golden-bloom": "🌟",
   "ancient-tree": "🏯",
+
+  // Exotic (ASCII/Unicode glyphs)
+  "fern-glyph": "❧",
+  "star-moss": "⍟",
+  "rune-sprout": "ᚡ",
+  "hex-bloom": "⌬",
+  "sigil-vine": "☸",
+  "eye-cluster": "ꙮ",
+  "spiral-fern": "ꝏ",
+  "thorn-script": "ᛝ",
 } as const;
 
 export const emojis = {
