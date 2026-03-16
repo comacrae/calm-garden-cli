@@ -5,6 +5,7 @@ import { emojis, EmojiKey } from "./const/emoji";
 import { loadData, saveData, BreathingData } from "./storage";
 import { Config, getPalette, getDifficultyTier, Palette } from "./config";
 import { visualizers } from "./visualizers";
+import { EMPTY_PLOT } from "./garden";
 
 // ─── State ───────────────────────────────────────────────────────────
 
@@ -116,7 +117,7 @@ function render(): void {
 
   // Garden
   const gardenSize = data.gardenSize;
-  const emptyPlot = "🌱";
+  const emptyPlot = EMPTY_PLOT;
   const chalkColors: Record<string, chalk.Chalk> = {
     red: chalk.red,
     green: chalk.green,
