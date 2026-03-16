@@ -8,6 +8,7 @@ export interface BreathingData {
   coins: number; // number representing the user's current coins. can be used to expand garden, plant new plants, etc.
   gardenSize: number; // number representing the user's current garden size
   plants: Plant[]; // 2d grid representing the user's garden. this will be used to visualize the user's progress
+  discovered: string[]; // plant types the user has unlocked/discovered
 }
 
 function getStoragePath() {
@@ -29,11 +30,18 @@ export const defaultData: BreathingData = {
   gardenSize: 3,
   plants: [],
   coins: 0,
+  discovered: [],
 };
 
 export async function loadData(): Promise<BreathingData> {
   const storedData = (await storage.getItem("breathingData")) || {};
-  return { ...defaultData, ...storedData };
+  const data = { ...defaultData, ...storedData };
+  // Backfill discovered from existing plants if missing
+  if (!storedData.discovered && data.plants.length > 0) {
+    data.discovered = [...new Set(data.plants.map((p: Plant) => p.type))];
+    await saveData(data);
+  }
+  return data;
 }
 
 export async function saveData(data: BreathingData): Promise<void> {
