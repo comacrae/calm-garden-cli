@@ -65,6 +65,7 @@ export const shopItems: ShopItem[] = [
   { name: "Garden Expansion", type: "expansion", cost: 0 },
   { name: "Shuffle Garden", type: "shuffle", cost: 50 },
   { name: "Sell Plant", type: "sell", cost: -20 },
+  { name: "Trade Plants", type: "trade", cost: 0 },
 ];
 
 export function initializeShopItems(): void {
@@ -79,6 +80,54 @@ export function getEffectivePrice(item: ShopItem, config: Config): number {
 
 export function calculateExpansionPrice(currentSize: number, config: Config): number {
   return Math.floor(100 * Math.pow(1.5, currentSize - 3) * getPriceMultiplier(config));
+}
+
+// ─── Rarity progression ─────────────────────────────────────────────
+
+export const rarityOrder = ["common", "uncommon", "rare", "exotic", "epic", "legendary"] as const;
+
+const unlockRequirements: Record<string, { prevTier: string; count: number }> = {
+  uncommon: { prevTier: "common", count: 2 },
+  rare: { prevTier: "uncommon", count: 2 },
+  exotic: { prevTier: "rare", count: 2 },
+  epic: { prevTier: "exotic", count: 2 },
+  legendary: { prevTier: "epic", count: 2 },
+};
+
+export function isTierUnlocked(tier: string, discovered: string[]): boolean {
+  const req = unlockRequirements[tier];
+  if (!req) return true; // common is always unlocked
+  const prevTierItems = shopItems.filter((i) => i.rarity === req.prevTier);
+  const discoveredCount = prevTierItems.filter((i) => discovered.includes(i.type)).length;
+  return discoveredCount >= req.count;
+}
+
+export function getUnlockHint(tier: string, discovered: string[]): string {
+  const req = unlockRequirements[tier];
+  if (!req) return "";
+  const prevTierItems = shopItems.filter((i) => i.rarity === req.prevTier);
+  const discoveredCount = prevTierItems.filter((i) => discovered.includes(i.type)).length;
+  return `Discover ${req.count - discoveredCount} more ${req.prevTier} items to unlock`;
+}
+
+// Plants that use text glyphs (not emoji) can be colored
+const colorableTiers = new Set(["exotic"]);
+
+export function isColorable(item: ShopItem): boolean {
+  return !!item.rarity && colorableTiers.has(item.rarity);
+}
+
+export const plantColors = ["red", "green", "yellow", "blue", "magenta", "cyan", "white"] as const;
+export type PlantColor = typeof plantColors[number];
+
+// ─── Trade recipes ──────────────────────────────────────────────────
+
+export const TRADE_COST = 3; // 3 plants of tier N → 1 random plant of tier N+1
+
+export function getNextTier(tier: string): string | null {
+  const idx = rarityOrder.indexOf(tier as any);
+  if (idx < 0 || idx >= rarityOrder.length - 1) return null;
+  return rarityOrder[idx + 1];
 }
 
 export function getPlantValue(plant: Plant, config: Config): number {

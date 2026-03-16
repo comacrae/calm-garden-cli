@@ -54,6 +54,7 @@ export const emojis = {
   expansion: "🔍",
   shuffle: "🔀",
   sell: "💰",
+  trade: "🔄",
   ...plantEmojis,
 } as const;
 

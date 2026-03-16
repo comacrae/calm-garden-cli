@@ -7,4 +7,6 @@ export interface Plant {
   growth: number;
   x: number;
   y: number;
+  /** optional color override for text-based plants (exotic+) */
+  color?: string;
 }

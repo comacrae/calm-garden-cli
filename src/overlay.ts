@@ -117,15 +117,28 @@ function render(): void {
   // Garden
   const gardenSize = data.gardenSize;
   const emptyPlot = "🌱";
+  const chalkColors: Record<string, chalk.Chalk> = {
+    red: chalk.red,
+    green: chalk.green,
+    yellow: chalk.yellow,
+    blue: chalk.blue,
+    magenta: chalk.magenta,
+    cyan: chalk.cyan,
+    white: chalk.white,
+  };
   for (let y = 0; y < gardenSize; y++) {
     let row = "";
     for (let x = 0; x < gardenSize; x++) {
       const plant = data.plants.find(
         (p: { x: number; y: number; type: string }) => p.x === x && p.y === y
       );
-      row += plant
-        ? emojis[plant.type as EmojiKey] || emptyPlot
-        : emptyPlot;
+      if (plant) {
+        const glyph = emojis[plant.type as EmojiKey] || emptyPlot;
+        const colorFn = plant.color ? chalkColors[plant.color] : null;
+        row += colorFn ? colorFn(glyph) : glyph;
+      } else {
+        row += emptyPlot;
+      }
     }
     lines.push(center(row, w));
   }
