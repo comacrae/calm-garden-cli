@@ -335,9 +335,11 @@ export async function startBreathingOverlay(
   moveTo(1, 1);
 
   if (sessionTime > 0) {
+    const tier = getDifficultyTier(config);
+    const coinsEarned = Math.floor(sessionTime / tier.ticksPerCoin);
     console.log(
-      chalk.green(
-        `Session done. ${sessionTime}s practiced, ${sessionTime} coins earned.\n`
+      palette.secondary(
+        `Session done. ${sessionTime}s practiced, ${coinsEarned} coins earned.\n`
       )
     );
   }
