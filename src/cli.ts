@@ -18,6 +18,8 @@ export async function setupConfig() {
       { name: "progress", message: "📊 Show Progress" },
       { name: "breathing", message: "🧘 Breathing Exercise" },
       { name: "shop", message: "🛒 Open Shop" },
+      { name: "encyclopedia", message: "📖 Encyclopedia" },
+      { name: "settings", message: "⚙️  Settings" },
       { name: "reset", message: "🔄 Reset Data" },
       { name: "exit", message: "👋 Exit" },
     ],
