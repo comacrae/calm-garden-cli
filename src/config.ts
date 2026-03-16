@@ -6,7 +6,7 @@ import chalk from "chalk";
 export type PaletteName = "garden" | "ocean" | "sunset" | "monochrome" | "aurora";
 export type DifficultyName = "chill" | "normal" | "focused" | "monk" | "ascetic";
 export type PriceScaleName = "cheap" | "normal" | "expensive" | "premium" | "luxury";
-export type VisualizerName = "progress-bar" | "circle" | "wave" | "orb" | "particles";
+export type VisualizerName = "progress-bar" | "wave" | "orb";
 
 export interface Config {
   colorPalette: PaletteName;
@@ -156,9 +156,15 @@ export function getPriceMultiplier(config: Config): number {
 
 // ─── Persistence ────────────────────────────────────────────────────
 
+const validVisualizers: Set<string> = new Set(["progress-bar", "wave", "orb"]);
+
 export async function loadConfig(): Promise<Config> {
   const stored = (await storage.getItem("config")) || {};
-  return { ...defaultConfig, ...stored };
+  const config = { ...defaultConfig, ...stored };
+  if (!validVisualizers.has(config.visualizer)) {
+    config.visualizer = defaultConfig.visualizer;
+  }
+  return config;
 }
 
 export async function saveConfig(config: Config): Promise<void> {

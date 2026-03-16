@@ -83,8 +83,22 @@ function render(): void {
 
   lines.push("");
 
-  const progress =
+  const rawProgress =
     currentPhaseDuration > 0 ? currentPhaseSecond / currentPhaseDuration : 0;
+
+  // Compute effective progress so visualizers breathe in AND out
+  let progress: number;
+  if (currentPhaseName === "Inhale") {
+    progress = rawProgress;
+  } else if (currentPhaseName === "Exhale") {
+    progress = 1 - rawProgress;
+  } else {
+    // Hold: check previous phase to determine level
+    const prevIndex = (phaseIndex - 1 + activePhases.length) % activePhases.length;
+    const prevPhase = activePhases[prevIndex].name;
+    progress = prevPhase === "Exhale" ? 0 : 1;
+  }
+
   const vizLines = visualizers[config.visualizer](
     progress,
     currentPhaseName,

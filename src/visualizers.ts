@@ -23,41 +23,6 @@ function progressBar(
   return [bar];
 }
 
-// ─── Circle ─────────────────────────────────────────────────────────
-
-function circle(
-  progress: number,
-  _phase: string,
-  palette: Palette,
-  _width: number
-): string[] {
-  const maxRadius = 4;
-  const radius = Math.max(1, Math.round(progress * maxRadius));
-  const size = radius * 2 + 1;
-  const lines: string[] = [];
-
-  for (let y = 0; y < size; y++) {
-    let row = "";
-    for (let x = 0; x < size * 2; x++) {
-      const dx = (x / 2) - radius;
-      const dy = y - radius;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (Math.abs(dist - radius) < 0.6) {
-        row += palette.accent("·");
-      } else if (dist < 0.8) {
-        row += palette.bar("●");
-      } else if (dist < radius * 0.5 && radius > 2) {
-        row += palette.dim("◦");
-      } else {
-        row += " ";
-      }
-    }
-    lines.push(row);
-  }
-  return lines;
-}
-
 // ─── Wave ───────────────────────────────────────────────────────────
 
 function wave(
@@ -137,47 +102,10 @@ function orb(
   return lines;
 }
 
-// ─── Particles ──────────────────────────────────────────────────────
-
-function particles(
-  progress: number,
-  _phase: string,
-  palette: Palette,
-  width: number
-): string[] {
-  const particleWidth = Math.min(30, width - 10);
-  const rows = 7;
-  const chars = ["·", "°", "•", "✧", "✦"];
-  const grid: string[][] = [];
-
-  for (let r = 0; r < rows; r++) {
-    grid.push(new Array(particleWidth).fill(" "));
-  }
-
-  const seeds = [3, 7, 11, 15, 19, 23, 27, 5, 13, 21, 9, 17, 25, 1, 29];
-  for (let i = 0; i < seeds.length; i++) {
-    const x = seeds[i] % particleWidth;
-    const baseRow = rows - 1 - (i % rows);
-    const offset = Math.round(progress * (rows - 1));
-    const row = baseRow - offset + Math.floor(i / rows);
-    const wrappedRow = ((row % rows) + rows) % rows;
-
-    if (wrappedRow >= 0 && wrappedRow < rows && x < particleWidth) {
-      const ch = chars[i % chars.length];
-      const colorFn = i % 3 === 0 ? palette.bar : i % 3 === 1 ? palette.accent : palette.dim;
-      grid[wrappedRow][x] = colorFn(ch);
-    }
-  }
-
-  return grid.map((row) => row.join(""));
-}
-
 // ─── Registry ───────────────────────────────────────────────────────
 
 export const visualizers: Record<string, VisualizerFn> = {
   "progress-bar": progressBar,
-  circle,
   wave,
   orb,
-  particles,
 };

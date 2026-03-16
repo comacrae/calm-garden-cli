@@ -1,6 +1,6 @@
 import { prompt } from "enquirer";
 import { BreathingData, saveData, loadData } from "../storage";
-import { clearConsole } from "../utils";
+import { clearConsole, sleep } from "../utils";
 import {
   ShopItem,
   initializeShopItems,
@@ -14,9 +14,9 @@ import {
   handleShuffleGarden,
   handleRegularPurchase,
 } from "./actions";
-import { sleep } from "../utils";
 import { Config, getPalette } from "../config";
 import { plantLore } from "../const/lore";
+import { emojis, EmojiKey } from "../const/emoji";
 
 export async function showShop(config: Config): Promise<void> {
   let data = await loadData();
@@ -42,7 +42,10 @@ export async function showShop(config: Config): Promise<void> {
     const item = shopItems.find((x) => response.choice.includes(x.name));
 
     if (item) {
-      await purchaseItem(data, item, config);
+      const shouldBuy = await showItemDetail(item, data, config);
+      if (shouldBuy) {
+        await purchaseItem(data, item, config);
+      }
     } else {
       console.log("Invalid selection. Please try again.");
       await sleep(2000);
@@ -72,6 +75,49 @@ async function purchaseItem(
   await handler();
   await saveData(data);
   await sleep(2000);
+}
+
+async function showItemDetail(
+  item: ShopItem,
+  data: BreathingData,
+  config: Config
+): Promise<boolean> {
+  const palette = getPalette(config);
+  const lore = plantLore[item.type];
+  const emoji = emojis[item.type as EmojiKey] || item.emoji || "?";
+  const price = item.name === "Garden Expansion"
+    ? calculateExpansionPrice(data.gardenSize, config)
+    : getEffectivePrice(item, config);
+
+  clearConsole();
+  console.log("");
+  console.log(palette.primary(`  ${emoji}  ${item.name}`));
+  if (lore) {
+    console.log(palette.accent(`  ${lore.latin}`));
+  }
+  console.log("");
+  if (item.rarity) {
+    console.log(palette.dim(`  Rarity: ${item.rarity}`));
+  }
+  console.log(palette.dim(`  Cost: ${price} coins`));
+  console.log(palette.dim(`  You have: ${data.coins} coins`));
+  console.log("");
+  if (lore) {
+    console.log(`  "${lore.lore}"`);
+    console.log("");
+  }
+
+  const response = await prompt<{ action: string }>({
+    type: "select",
+    name: "action",
+    message: "",
+    choices: [
+      { name: "buy", message: "💰 Buy" },
+      { name: "back", message: "↩ Back" },
+    ],
+  });
+
+  return response.action === "buy";
 }
 
 function createShopMenu(
